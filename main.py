@@ -41,89 +41,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def scraperBUY():
-    
-    driver = webdriver.Chrome()
-    driver.get('https://p2p.binance.com/en/trade/sell/USDT?fiat=RUB&payment=ALL')
-
-    time.sleep(5) 
-
-    prices = driver.find_elements_by_xpath("//div[@class='css-1m1f8hn']")
-
-    for i in prices:
-        print(i.text)
-        a1.append(i.text)
-
-    driver.close()
-    
-    
-def scraperSELL():
-    
-    driver = webdriver.Chrome()
-    driver.get('https://p2p.binance.com/en/trade/all-payments/USDT?fiat=RUB')
-
-    time.sleep(5) 
-
-    prices = driver.find_elements_by_xpath("//div[@class='css-1m1f8hn']")
-
-    for i in prices:
-        print(i.text)
-        a2.append(i.text)
-
-    driver.close()
-      
-    
-def cbrates():
-    data = requests.get(url="https://www.cbr-xml-daily.ru/daily_json.js").json()
-    cbrate = float(data["Valute"]["USD"]["Value"])
-    return cbrate
-      
-    
-def clean(a1,a2):
-    ratesBUY = []
-    ratesSELL= []
-    
-    for i in a1:
-        if i == '':
-            break
-        else:
-            num = float(i)
-            ratesBUY.append(num)
-            
-    for i in a2:
-        if i == '':
-            break
-        else:
-            num = float(i)
-            ratesSELL.append(num)
-                  
-    rateBUY = sum(ratesBUY)/len(ratesBUY)
-    rateSELL= sum(ratesSELL)/len(ratesSELL)
-    
-    rateBUY = round(rateBUY, 2)
-    rateSELL= round(rateSELL, 2)
-    
-    return (rateBUY, rateSELL)
-
-
-def handler():
-    
-    global a1
-    a1 = []
-    global a2
-    a2 = []
-    
-    scraperBUY()
-    scraperSELL()
-    
-    global rateBUY
-    global rateSELL
-    global cbrate
-    
-    rateBUY, rateSELL = clean(a1,a2)
-    
-    cbrate = cbrates()
-    
 
 def extract_status_change(
     chat_member_update: ChatMemberUpdated,
@@ -228,16 +145,21 @@ def greet_chat_members(update: Update, context: CallbackContext) -> None:
 
 def rates(update, context):
     
+    rateBUY = open('rateBUY.txt', 'r').read()
+    rateSELL = open('rateSELL.txt', 'r').read()
+    cbrate = open('cbrate.txt', 'r').read()
+    
     message = "USD/RUB rates:\nSell USDT: {0} \nBuy USDT: {1} \nCBRF rate: {2}".format(rateBUY,rateSELL,cbrate)
 
     update.effective_chat.send_message(message,parse_mode=ParseMode.MARKDOWN,)
     
+
+def start(update, context):
     
-def send_rate():
+    message = "hello, this is FX rate bot"
     
-    message = "USD/RUB exchange rate:\nSell USDT: {0} \nBuy USDT: {1} \n".format(77,64)
+    update.effective_chat.send_message(message,parse_mode=ParseMode.MARKDOWN,)
     
-    bot.send_message("someusernameorid", message,parse_mode=ParseMode.MARKDOWN)
 
 
 def main() -> None:
@@ -253,17 +175,8 @@ def main() -> None:
 
 
     dispatcher.add_handler(CommandHandler("rates", rates))
+    updater.dispatcher.add_handler(CommandHandler("start", start))
     
-    
-    now = datetime.now()
-    current_time = now.strftime("%M")
-
-    if current_time == "13":
-        handler()
-
-    else:
-        pass
-
 
     # Handle members joining/leaving chats.
     dispatcher.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
@@ -274,6 +187,7 @@ def main() -> None:
     updater.start_polling(allowed_updates=Update.ALL_TYPES)
     updater.idle()
 
+    
 
 if __name__ == "__main__":
     main()
